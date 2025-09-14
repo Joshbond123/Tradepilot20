@@ -1,0 +1,37 @@
+[
+  {
+    "id": "99d4ade9-39b8-403b-a320-cdfa07c45ce9",
+    "name": "Test User",
+    "email": "test@example.com",
+    "rating": 5,
+    "reviewText": "This is a test review to verify the submission flow works correctly. The CallMeBot integration and form submission have been fixed.",
+    "created_at": "2025-09-14T07:08:45.913Z"
+  },
+  {
+    "id": "449c25a4-1916-408a-93f0-0f9929da3956",
+    "name": "Test User",
+    "email": "test@example.com",
+    "rating": 5,
+    "reviewText": "Testing the fix for review submission timeouts.",
+    "created_at": "2025-09-14T07:20:54.462Z"
+  },
+  {
+    "id": "46cc3199-c222-4115-bc41-69119f204c5d",
+    "name": "Joshua Adeniran",
+    "email": "cryptoguardian10@gmail.com",
+    "rating": 4,
+    "reviewText": "Syysvcd djdjdhbdh djdjdjjfjdd bdjdhdhbd ",
+    "image": "/uploads/reviews/review-1757834814787-501976392.jpg",
+    "created_at": "2025-09-14T07:27:25.374Z"
+  },
+  {
+    "id": "d731aa3c-f48a-4f23-b1bb-a8d2e4c8a8f9",
+    "name": "Joshua Adeniran",
+    "email": "adeniranj787@gmail.com",
+    "rating": 4,
+    "reviewText": "Fuck you off man",
+    "image": "/uploads/reviews/review-1757834954709-408312878.jpg",
+    "created_at": "2025-09-14T07:29:15.319Z",
+    "adminReply": "Good boy fix this error now"
+  }
+]
