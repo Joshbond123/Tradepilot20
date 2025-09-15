@@ -61,18 +61,29 @@ import {
   Filter,
   Eye,
   Heart,
-  ArrowLeft
+  ArrowLeft,
+  Save
 } from "lucide-react";
 
 // Helper function to make authenticated requests
 const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("token");
+  
+  // Don't set Content-Type for FormData - let browser set it with boundary
+  const headers: Record<string, string> = {
+    "Authorization": `Bearer ${token}`,
+  };
+  
+  // Only set Content-Type for non-FormData requests
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  
   const response = await fetch(`/api${endpoint}`, {
     ...options,
     headers: {
       ...options.headers,
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
+      ...headers,
     },
   });
 
@@ -104,6 +115,15 @@ export default function Admin() {
   // Review management state
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [showReviewDetail, setShowReviewDetail] = useState(false);
+  const [isEditingReview, setIsEditingReview] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    email: "",
+    rating: 5,
+    reviewText: "",
+    image: null as File | null
+  });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [reviewReplyMessage, setReviewReplyMessage] = useState("");
   const [reviewSearchQuery, setReviewSearchQuery] = useState("");
   const [reviewRatingFilter, setReviewRatingFilter] = useState("all");
@@ -352,6 +372,33 @@ export default function Admin() {
     onError: (error: any) => {
       toast({
         title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit review mutation
+  const editReviewMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
+      return fetchWithAuth(`/admin/reviews/${id}`, {
+        method: "PATCH",
+        body: data,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Review Updated",
+        description: "Review has been updated successfully",
+      });
+      refetchReviews();
+      setIsEditingReview(false);
+      setEditFormData({ name: "", email: "", rating: 5, reviewText: "", image: null });
+      setImagePreview(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -1795,6 +1842,27 @@ export default function Admin() {
                             <Button
                               size="sm"
                               variant="outline"
+                              className="border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-white"
+                              onClick={() => {
+                                setSelectedReview(review);
+                                setEditFormData({
+                                  name: review.name || "",
+                                  email: review.email || "",
+                                  rating: review.rating || 5,
+                                  reviewText: review.reviewText || "",
+                                  image: null
+                                });
+                                setImagePreview(review.image || null);
+                                setIsEditingReview(true);
+                                setShowReviewDetail(true);
+                              }}
+                              data-testid={`edit-review-${review.id}`}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                               onClick={() => {
                                 if (confirm(`Are you sure you want to delete the review from ${review.name}?`)) {
@@ -1909,39 +1977,180 @@ export default function Admin() {
                   </Card>
                 )}
 
-                {/* Admin Reply Section */}
-                <Card className="bg-crypto-card border-gray-700">
-                  <CardHeader>
-                    <CardTitle className="text-white text-xl">
-                      {selectedReview.adminReply ? "Update Admin Reply" : "Add Admin Reply"}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Textarea
-                      value={reviewReplyMessage}
-                      onChange={(e) => setReviewReplyMessage(e.target.value)}
-                      placeholder="Type your professional response to this customer review..."
-                      className="bg-gray-700 border-gray-600 text-white min-h-[150px] resize-vertical text-lg"
-                      rows={8}
-                      data-testid="review-reply-textarea"
-                    />
-                    <p className="text-sm text-gray-400">
-                      This reply will be publicly visible on your reviews page and marked as "Official TradePilot Response"
-                    </p>
-                  </CardContent>
-                </Card>
+                {/* Edit Review Form */}
+                {isEditingReview ? (
+                  <Card className="bg-crypto-card border-gray-700">
+                    <CardHeader>
+                      <CardTitle className="text-white text-xl flex items-center gap-2">
+                        <Edit className="w-5 h-5" />
+                        Edit Review
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-gray-300">Customer Name</Label>
+                          <Input
+                            value={editFormData.name}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                            className="bg-gray-700 border-gray-600 text-white"
+                            data-testid="edit-review-name"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-gray-300">Email</Label>
+                          <Input
+                            type="email"
+                            value={editFormData.email}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, email: e.target.value }))}
+                            className="bg-gray-700 border-gray-600 text-white"
+                            data-testid="edit-review-email"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-gray-300">Rating</Label>
+                        <Select value={editFormData.rating.toString()} onValueChange={(value) => setEditFormData(prev => ({ ...prev, rating: parseInt(value) }))}>
+                          <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-700 border-gray-600">
+                            <SelectItem value="5">⭐⭐⭐⭐⭐ (5 stars)</SelectItem>
+                            <SelectItem value="4">⭐⭐⭐⭐ (4 stars)</SelectItem>
+                            <SelectItem value="3">⭐⭐⭐ (3 stars)</SelectItem>
+                            <SelectItem value="2">⭐⭐ (2 stars)</SelectItem>
+                            <SelectItem value="1">⭐ (1 star)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-gray-300">Review Text</Label>
+                        <Textarea
+                          value={editFormData.reviewText}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, reviewText: e.target.value }))}
+                          className="bg-gray-700 border-gray-600 text-white min-h-[120px]"
+                          rows={5}
+                          data-testid="edit-review-text"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="text-gray-300">Review Image</Label>
+                        <div className="space-y-3">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setEditFormData(prev => ({ ...prev, image: file }));
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (e) => setImagePreview(e.target?.result as string);
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="block w-full text-sm text-gray-300 
+                              file:mr-4 file:py-2 file:px-4 
+                              file:rounded-full file:border-0 
+                              file:text-sm file:font-semibold 
+                              file:bg-crypto-blue file:text-white 
+                              hover:file:bg-blue-600"
+                            data-testid="edit-review-image"
+                          />
+                          {imagePreview && (
+                            <div className="relative">
+                              <img 
+                                src={imagePreview} 
+                                alt="Review preview" 
+                                className="max-w-full h-auto max-h-40 rounded-lg border border-gray-600"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white border-red-500"
+                                onClick={() => {
+                                  setImagePreview(null);
+                                  setEditFormData(prev => ({ ...prev, image: null }));
+                                }}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Upload an image that will appear as if the customer uploaded it
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  /* Admin Reply Section */
+                  <Card className="bg-crypto-card border-gray-700">
+                    <CardHeader>
+                      <CardTitle className="text-white text-xl">
+                        {selectedReview.adminReply ? "Update Admin Reply" : "Add Admin Reply"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Textarea
+                        value={reviewReplyMessage}
+                        onChange={(e) => setReviewReplyMessage(e.target.value)}
+                        placeholder="Type your professional response to this customer review..."
+                        className="bg-gray-700 border-gray-600 text-white min-h-[150px] resize-vertical text-lg"
+                        rows={8}
+                        data-testid="review-reply-textarea"
+                      />
+                      <p className="text-sm text-gray-400">
+                        This reply will be publicly visible on your reviews page and marked as "Official TradePilot Response"
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex justify-between pt-6 border-t border-gray-600">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowReviewDetail(false)}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-700 px-6 py-3"
-                    data-testid="cancel-review-dialog"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Cancel
-                  </Button>
+                  <div className="space-x-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowReviewDetail(false);
+                        setIsEditingReview(false);
+                        setEditFormData({ name: "", email: "", rating: 5, reviewText: "", image: null });
+                        setImagePreview(null);
+                      }}
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700 px-6 py-3"
+                      data-testid="cancel-review-dialog"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                    
+                    {!isEditingReview && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setEditFormData({
+                            name: selectedReview.name || "",
+                            email: selectedReview.email || "",
+                            rating: selectedReview.rating || 5,
+                            reviewText: selectedReview.reviewText || "",
+                            image: null
+                          });
+                          setImagePreview(selectedReview.image || null);
+                          setIsEditingReview(true);
+                        }}
+                        className="border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-white px-6 py-3"
+                        data-testid="edit-review-button"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Review
+                      </Button>
+                    )}
+                  </div>
+
                   <div className="space-x-3">
                     <Button
                       variant="outline"
@@ -1949,6 +2158,7 @@ export default function Admin() {
                         if (confirm(`Are you sure you want to delete the review from ${selectedReview.name}?`)) {
                           deleteReviewMutation.mutate(selectedReview.id);
                           setShowReviewDetail(false);
+                          setIsEditingReview(false);
                         }
                       }}
                       className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-6 py-3"
@@ -1957,25 +2167,53 @@ export default function Admin() {
                       <Trash2 className="w-5 h-5 mr-2" />
                       Delete Review
                     </Button>
-                    <Button
-                      onClick={() => {
-                        if (reviewReplyMessage.trim()) {
-                          replyToReviewMutation.mutate({
+
+                    {isEditingReview ? (
+                      <Button
+                        onClick={() => {
+                          const formData = new FormData();
+                          formData.append('name', editFormData.name);
+                          formData.append('email', editFormData.email);
+                          formData.append('rating', editFormData.rating.toString());
+                          formData.append('reviewText', editFormData.reviewText);
+                          
+                          if (editFormData.image) {
+                            formData.append('image', editFormData.image);
+                          }
+
+                          editReviewMutation.mutate({
                             id: selectedReview.id,
-                            adminReply: reviewReplyMessage.trim(),
+                            data: formData
                           });
+                        }}
+                        disabled={editReviewMutation.isPending || !editFormData.name.trim() || !editFormData.reviewText.trim()}
+                        className="bg-crypto-green hover:bg-green-600 text-white px-6 py-3"
+                        data-testid="save-review-edit"
+                      >
+                        <Save className="w-5 h-5 mr-2" />
+                        {editReviewMutation.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          if (reviewReplyMessage.trim()) {
+                            replyToReviewMutation.mutate({
+                              id: selectedReview.id,
+                              adminReply: reviewReplyMessage.trim(),
+                            });
+                          }
+                        }}
+                        disabled={!reviewReplyMessage.trim() || replyToReviewMutation.isPending}
+                        className="bg-crypto-green hover:bg-green-600 text-white px-6 py-3"
+                        data-testid="save-review-reply"
+                      >
+                        <Reply className="w-5 h-5 mr-2" />
+                        {replyToReviewMutation.isPending 
+                          ? "Saving..." 
+                          : selectedReview.adminReply ? "Update Reply" : "Add Reply"
                         }
-                      }}
-                      disabled={!reviewReplyMessage.trim() || replyToReviewMutation.isPending}
-                      className="bg-crypto-green hover:bg-green-600 text-white px-6 py-3"
-                      data-testid="save-review-reply"
-                    >
-                      <Reply className="w-5 h-5 mr-2" />
-                      {replyToReviewMutation.isPending 
-                        ? "Saving..." 
-                        : selectedReview.adminReply ? "Update Reply" : "Add Reply"
-                      }
-                    </Button>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

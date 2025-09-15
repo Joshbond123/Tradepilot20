@@ -2347,6 +2347,42 @@ TradePilot Support Team 🚀`
     }
   });
 
+  // Admin full review update with image upload
+  app.patch("/api/admin/reviews/:id", upload.single("image"), authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = {
+        ...req.body,
+        rating: req.body.rating ? parseInt(req.body.rating) : undefined,
+      };
+
+      // Handle image upload
+      if (req.file) {
+        updateData.image = `/uploads/reviews/${req.file.filename}`;
+      }
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+      const updatedReview = await storage.updateReview(id, updateData);
+      
+      if (!updatedReview) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+
+      res.json(updatedReview);
+    } catch (error) {
+      console.error('Admin update review error:', error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid review data", 
+          errors: error.issues 
+        });
+      }
+      res.status(500).json({ message: "Failed to update review" });
+    }
+  });
+
   app.delete("/api/admin/reviews/:id", authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
     try {
       const { id } = req.params;

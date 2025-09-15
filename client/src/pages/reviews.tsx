@@ -80,11 +80,6 @@ export default function Reviews() {
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
               Verified feedback from our community of professional investors and financial experts
             </p>
-            {reviews.length > 0 && (
-              <p className="text-slate-400 mt-4">
-                Showing {reviews.length} total review{reviews.length !== 1 ? 's' : ''}
-              </p>
-            )}
           </motion.div>
         </div>
       </div>
@@ -155,46 +150,49 @@ export default function Reviews() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.8, delay: 0.4 }}
-                  className="flex items-center justify-center gap-2"
+                  className="flex items-center justify-center gap-4"
                 >
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="border-slate-600 text-white hover:bg-slate-800 disabled:opacity-50"
-                    data-testid="button-prev-page"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
+                  {currentPage > 1 && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      className="text-white hover:bg-slate-800 transition-colors"
+                      data-testid="button-prev-page"
+                    >
+                      &lt; Previous page
+                    </Button>
+                  )}
 
-                  {Array.from({ length: totalPages }).map((_, i) => {
-                    const page = i + 1;
-                    return (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        onClick={() => handlePageChange(page)}
-                        className={
-                          currentPage === page
-                            ? "crypto-gradient text-white"
-                            : "border-slate-600 text-white hover:bg-slate-800"
-                        }
-                        data-testid={`button-page-${page}`}
-                      >
-                        {page}
-                      </Button>
-                    );
-                  })}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                      const page = i + 1;
+                      return (
+                        <span
+                          key={page}
+                          className={
+                            currentPage === page
+                              ? "text-white font-bold cursor-pointer px-2 py-1"
+                              : "text-slate-400 hover:text-white cursor-pointer px-2 py-1 transition-colors"
+                          }
+                          onClick={() => handlePageChange(page)}
+                          data-testid={`button-page-${page}`}
+                        >
+                          {currentPage === page ? `[${page}]` : page}
+                        </span>
+                      );
+                    })}
+                  </div>
 
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="border-slate-600 text-white hover:bg-slate-800 disabled:opacity-50"
-                    data-testid="button-next-page"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
+                  {currentPage < totalPages && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className="text-white hover:bg-slate-800 transition-colors"
+                      data-testid="button-next-page"
+                    >
+                      Next page &gt;
+                    </Button>
+                  )}
                 </motion.div>
               )}
             </>
