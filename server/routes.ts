@@ -2359,7 +2359,12 @@ TradePilot Support Team 🚀`
       // Handle image upload
       if (req.file) {
         updateData.image = `/uploads/reviews/${req.file.filename}`;
+      } else if (req.body.keepExistingImage !== 'true') {
+        // Only remove image if we're not explicitly keeping the existing one
+        // and no new image was uploaded
+        updateData.image = null;
       }
+      // If keepExistingImage is true and no new file, don't modify the image field
 
       // Remove undefined values
       Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);

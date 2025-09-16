@@ -2177,8 +2177,14 @@ export default function Admin() {
                           formData.append('rating', editFormData.rating.toString());
                           formData.append('reviewText', editFormData.reviewText);
                           
+                          // Only append image if a new one was selected
                           if (editFormData.image) {
                             formData.append('image', editFormData.image);
+                          }
+                          
+                          // Keep existing image if no new image was selected and we had an image preview
+                          if (!editFormData.image && imagePreview && selectedReview.image) {
+                            formData.append('keepExistingImage', 'true');
                           }
 
                           editReviewMutation.mutate({
